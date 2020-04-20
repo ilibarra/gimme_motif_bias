@@ -61,14 +61,14 @@ python gimme_motif_bias.py -a neuron -b shortlist1 --motifid M08474_1.94d --over
 
 ### Running time
 - Around 1-2 minutes for one pair.
-- 20-40 minutes for full execution betwee a-b and multiple TFs (one CPU, default parameters, verification against other genomes and
+- 10 minutes for full execution between cell type versus all one TFs (one CPU, default parameters, verification against other genomes and
 RNA secondary structure assessment).
 - Adding more cell types increases quadratically running time quadratically.
 - Increasing the number of motifs increases linearly the running time.
 
 ### Misc
-- Custom cell types and gene sets can be added manually in `input/genes_by_ont` as fasta list.
-- You can add any custom set of hits of your interest in `motif_hits_cisbp_build_1.94d_mm10`.
+- Custom cell types and gene sets can be added manually in `input/genes_by_ont` as text files. Mind the format for labels to be recognized.
+- You can add any custom set of hits of your interest in `motif_hits_cisbp_build_1.94d_mm10`, following the motif hit format.
 
 ### Feedback, errors, or further questions
 - Report in Issues.
