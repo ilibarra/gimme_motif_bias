@@ -91,7 +91,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     engmus_by_enghuman = DataFrameAnalyzer.get_dict(human_orthologs, 'Gene stable ID', 'Mouse gene stable ID')
 
     # using new ENSEMBL identifiers to map between old and new db
-    updated_gtex_identifiers = GTEXAnalyzer.get_updated_ensembl_identifiers(datadir='../../data')
+    updated_gtex_identifiers = GTEXAnalyzer.get_updated_ensembl_identifiers(datadir='input')
 
     motifs_path = join('input', 'motif_hits_cisbp_build_1.94d_mm10', motif_id + ".tsv.gz")
     print(exists(motifs_path)), motifs_path
