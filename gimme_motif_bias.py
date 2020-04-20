@@ -8,9 +8,24 @@ Calculate motif biases for motif pairs, using standalone Python libraries
 
 import utilities
 from utilities import *
+from itertools import product
+import numpy as np
 
 # Main script function
 def calculate_motif_bias(a, b, motif_id, **kwargs):
+
+    # save these genes in each tissue, assuming files do not exist
+    output_dir_genes = "input/genes_by_ont"
+    if kwargs.get('listont'):
+        print('available cell types')
+        for f in listdir(output_dir_genes):
+            print(f.replace(".txt", ''))
+        return
+    if kwargs.get('listmotifs') is not None:
+        tfs = HumanTFs.get_tf_motifs_cisbp(datadir="../../data/")
+        print(tfs[tfs['HGNC symbol'].str.lower().str.contains(kwargs.get('listmotifs').lower())])
+        return
+
     tm = TabulaMuris(method='FACS')
 
     plot = False
@@ -19,7 +34,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                                      inputdir='input')
     genes = set(zscores['gene.name'])
 
-    input_dir, output_dir = kwargs.get('inputdir'), kwargs.get('outputdir')
+    input_dir, output_dir = kwargs.get('indir'), kwargs.get('outdir')
 
     ens_by_gene_bkp = join(input_dir, "ensembl_by_symbol_tabula_muris.bkp")
     if not exists(ens_by_gene_bkp):
@@ -29,11 +44,10 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     zscores['ensembl'] = zscores['gene.name'].map(name_by_gene)
 
     query_tissues = None # {'Brain', 'Pancreas', 'Limb_Muscle', 'Skin', 'Liver', 'Fat', 'Heart', 'Lung'}
-    N_GENES = 1000
+    N_GENES = kwargs.get('ngenes')
+
     genes_by_ont = tm.get_genes_by_ont(N_GENES, add_external=True, n_cells_cutoff=10)
 
-    # save these genes in each tissue, assuming files do not exist
-    output_dir_genes = "input/genes_by_ont_tabula_muris"
     if not exists(output_dir_genes):
         mkdir(output_dir_genes)
     for ont in genes_by_ont:
@@ -42,6 +56,12 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         if not exists(output_path):
             DataFrameAnalyzer.write_list(genes_by_ont[ont], output_path)
 
+    print('Comparing %s versus %s' % (a, b))
+
+    if not a in genes_by_ont or not b in genes_by_ont:
+        print('one cell type was not found (check format, quotes, etc.)')
+        assert a in genes_by_ont and b in genes_by_ont
+
     print('reading results motif hits')
 
     # cisbp motif hits =
@@ -49,43 +69,34 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
 
     print('reading all motifs paths...')
     print(motifs_path_all)
-    all_motifs_df = DataFrameAnalyzer.read_tsv_gz(motifs_path_all)
-
-    for m, grp in all_motifs_df.groupby('#pattern name'):
-        print(m, grp.shape[0])
-        DataFrameAnalyzer.to_tsv_gz(grp, join('input/motif_hits_cisbp_build_1.94d_mm10/%s' % m.replace(".txt", '.tsv.gz')))
 
 
     print('done...')
-    motif_ids = set(all_motifs_df['filename'].str.replace(".tsv.gz", ""))
-    print(all_motifs_df.head())
-    print(len(motif_ids))
-    print(list(motif_ids)[:10])
+    motif_ids = set()
+    for f in listdir(join(input_dir, 'motif_hits_cisbp_build_1.94d_mm10')):
+        motif_ids.add(f.replace(".tsv.gz", ''))
 
-    tfs = HumanTFs.get_tf_motifs_cisbp(datadir="../../data/")
+    if not motif_id in motif_ids:
+        print('Your query motif ID is not in the mapped motifs directory. Cannot execute...')
+        assert not motif_id in motif_ids
+    else:
+        print('%s query motif found in motifs directory' % motif_id)
+
+    tfs = HumanTFs.get_tf_motifs_cisbp(datadir=input_dir)
     ensembl_by_model = {m: set(grp['Ensembl ID']) for m, grp in tfs.groupby('CIS-BP ID')}
     tfname_by_ensembl = DataFrameAnalyzer.get_dict(tfs, 'Ensembl ID', 'HGNC symbol')
 
-    human_orthologs = DataFrameAnalyzer.read_tsv("../../data/human_mm10_homologs.tsv", sep='\t')
+    human_orthologs = DataFrameAnalyzer.read_tsv("input/human_mm10_homologs.tsv", sep='\t')
     # print human_orthologs.head()
     engmus_by_enghuman = DataFrameAnalyzer.get_dict(human_orthologs, 'Gene stable ID', 'Mouse gene stable ID')
 
     # using new ENSEMBL identifiers to map between old and new db
     updated_gtex_identifiers = GTEXAnalyzer.get_updated_ensembl_identifiers(datadir='../../data')
-    query = kwargs.get('query', None)
-    n_group = kwargs.get('ngroup', 1)
 
-    counter = -1
-
-    counter += 1
-
-    print(counter, 'next motif', m)
-
-    grp = None
-    if all_motifs_df is None:
-        grp = DataFrameAnalyzer.read_tsv_gz(join(motifs_dir, m + ".tsv.gz"))
-    else:
-        grp = all_motifs_df[all_motifs_df['filename'] == m]
+    motifs_path = join('input', 'motif_hits_cisbp_build_1.94d_mm10', motif_id + ".tsv.gz")
+    print(exists(motifs_path)), motifs_path
+    assert exists(motifs_path)
+    grp = DataFrameAnalyzer.read_tsv_gz(join('input', 'motif_hits_cisbp_build_1.94d_mm10', motif_id + ".tsv.gz"))
 
     grp.columns = ['motif.id', 'ensembl'] + list(grp.columns[2:])
     # put gene name into res column
@@ -100,38 +111,39 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     # print updated_gtex_identifiers.head()
 
     # some cisbp motifs are associated to more than one gene
-    for ensg_human in ensembl_by_model[m]:
-        code = m + "_" + ensg_human
+    for ensg_human in ensembl_by_model[motif_id]:
+        code = motif_id + "_" + ensg_human
         print(code)
-        if query is not None:
-            if not query in code:
-                continue
-
         print('analyzing', ensg_human)
 
         # if code != 'M06660_1.94d_ENSG00000082641':
         #     continue
-        pkl_path = join('../../data/enrichment_heatmaps_cisbp_mm10', 'tabula_muris',
-                        m + "_" + ensg_human + ".pkl")
-        if exists(pkl_path):
+        output_dir_enrichments = join(output_dir, 'enrichment_heatmaps_cisbp_mm10', 'tabula_muris')
+        if not exists(output_dir_enrichments):
+            makedirs(output_dir_enrichments)
+
+        pkl_path = join(output_dir_enrichments, motif_id + "_" + ensg_human + ".pkl")
+        if exists(pkl_path) and not kwargs.get('overwrite'):
             print('pkl path exists for engs_human', ensg_human, 'skip...')
             continue
-        output_dir_mm10 = "../../data/figures/enrichment_n_depletion_clustermaps_expr_atlas_CISBP_build_1.94d_mm10"
-        output_dir_mm10_motif_biases = "../../data/figures/enrichment_n_depletion_clustermaps_tabula_muris_CISBP_build_1.94d_mm10"
+        output_dir_mm10 = join("%s" % output_dir,
+                               "enrichment_n_depletion_clustermaps_expr_atlas_CISBP_build_1.94d_mm10")
+        output_dir_mm10_motif_biases = join("%s" % output_dir,
+                                            "figures/enrichment_n_depletion_clustermaps_tabula_muris_CISBP_build_1.94d_mm10")
         if not exists(output_dir_mm10):
-            mkdir(output_dir_mm10)
-        output_path = join(output_dir_mm10, m + "_" + ensg_human)
+            makedirs(output_dir_mm10)
+        output_path = join(output_dir_mm10, motif_id + "_" + ensg_human)
 
         if not exists(output_dir_mm10_motif_biases):
-            mkdir(output_dir_mm10_motif_biases)
-        output_path_motif_biases = join(output_dir_mm10_motif_biases, m + ".tsv.gz")
+            makedirs(output_dir_mm10_motif_biases)
+        output_path_motif_biases = join(output_dir_mm10_motif_biases, motif_id + ".tsv.gz")
 
         # print updated_gtex_identifiers[updated_gtex_identifiers['Description'] == 'DUX4']
         sel = updated_gtex_identifiers[(updated_gtex_identifiers['ensembl.mygene'] == ensg_human) |
                                        (updated_gtex_identifiers['ensembl.gtex'] == ensg_human)]
 
         if sel.shape[0] < 1 and len(set(sel['ensembl.gtex'])) != 1:
-            print(m, ensg_human)
+            print(motif_id, ensg_human)
             print(sel)
             print('skip...')
             continue
@@ -141,8 +153,6 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         ensembl_gtex = list(sel['Name'])[0]
         print(ensembl_gtex)
 
-        fig = plt.figure(figsize=(kwargs.get('w', 16), kwargs.get('h', 5.5)))
-        plot_i = 0
         for zscores, label in zip([zscores], ['tabula-muris']):
             print('next check:', label)
             if not 'Mouse gene stable ID' in zscores:
@@ -163,8 +173,9 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                 # calculate enrichmments using a new method
                 print('calculating pair wise enrichments...')
                 try:
-                    enrichments = EnrichmentAnalyzer.get_motif_enrichments_by_pairwise_grouping(genes_by_ont, grp,
-                                                                                                label=m,
+                    enrichments = EnrichmentAnalyzer.get_motif_enrichments_by_pairwise_grouping({query: genes_by_ont[query] for query in [a, b]},
+                                                                                                grp,
+                                                                                                label=motif_id,
                                                                                                 column_gene='gene.name')
                     enrichments['odds.ratio'] = np.where(enrichments['a'] == enrichments['b'], 1.0,
                                                          enrichments['odds.ratio'])
@@ -279,25 +290,27 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             # print symbols
             print(hm.shape)
 
-            if True or not exists(pkl_path):
+            if not exists(pkl_path) or kwargs.get('overwrite'):
                 DataFrameAnalyzer.to_pickle([symbols, hm, enrichments], pkl_path)
-
-            print('done...')
-            # exit()
+                DataFrameAnalyzer.to_tsv_gz(enrichments, pkl_path.replace(".pkl", '.tsv.gz'))
 
 
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--a", type=int, default='hepatocyte', help='minimum primer length (def. 20)')
-    parser.add_argument("--b", type=int, default='neuron', help='minimum primer length (def. 24)')
-    parser.add_argument("--inputdir", type=int, default='input', help='input directory')
-    parser.add_argument("--output", type=int, default='output', help='output directory')
-
-    parser.add_argument("--motifid", type=float, default=None,
+    parser.add_argument("--listont", action='store_true', help='List available ont and finish', default=False)
+    parser.add_argument("--listmotifs", type=str, default=None, help='Get all motifs associated with TF and finish')
+    parser.add_argument("-a", type=str, default='hepatocyte', help='minimum primer length (def. 20)')
+    parser.add_argument("-b", type=str, default='neuron', help='minimum primer length (def. 24)')
+    parser.add_argument("--ngenes", type=int, help='set number of topN genes for comparison', default=1000)
+    parser.add_argument("--indir", type=str, default='input', help='input directory')
+    parser.add_argument("--outdir", type=str, default='output', help='output directory')
+    parser.add_argument("--overwrite", action='store_true', help='Force writing')
+    parser.add_argument("--motifid", type=str, default=None,
                         help='motif.id')
 
     opts = parser.parse_args()
 
-    calculate_motif_bias(opts.a, opts.b, opts.motifid, inputdir=opts.inputdir, output=opts.output)
+    calculate_motif_bias(opts.a, opts.b, opts.motifid, indir=opts.indir, outdir=opts.outdir, listont=opts.listont,
+                         listmotifs=opts.listmotifs, ngenes=opts.ngenes, overwrite=opts.overwrite)
