@@ -22,7 +22,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             print(f.replace(".txt", ''))
         return
     if kwargs.get('listmotifs') is not None:
-        tfs = HumanTFs.get_tf_motifs_cisbp(datadir="../../data/")
+        tfs = HumanTFs.get_tf_motifs_cisbp(datadir="input")
         print(tfs[tfs['HGNC symbol'].str.lower().str.contains(kwargs.get('listmotifs').lower())])
         return
 
