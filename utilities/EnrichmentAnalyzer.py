@@ -15,45 +15,6 @@ import pandas as pd
 from numpy import median
 
 class EnrichmentAnalyzer(object):
-
-    @staticmethod
-    def get_motif_hits(motif_ids=None):
-        motifs_dir = '/g/scb2/zaugg/rio/EclipseProjects/zaugglab/moritz_collaboration/data/motif_hits_cisbp_build_1.94d_mm10'
-
-        if motif_ids is None:
-            motif_ids = set()
-            for f in listdir(motifs_dir):
-                motif_ids.add(f.replace(".tsv.gz", ''))
-
-        from lib.HumanTFs import HumanTFs
-        from lib.MyGeneAnalyzer import MyGeneAnalyzer
-        tfs = HumanTFs.get_tf_motifs_cisbp()
-        ensembl_by_model = {m: set(grp['Ensembl ID']) for m, grp in tfs.groupby('CIS-BP ID')}
-        tfname_by_ensembl = DataFrameAnalyzer.get_dict(tfs, 'Ensembl ID', 'HGNC symbol')
-
-        human_orthologs = DataFrameAnalyzer.read_tsv("../../data/human_mm10_homologs.tsv", sep='\t')
-        # print human_orthologs.head()
-        engmus_by_enghuman = DataFrameAnalyzer.get_dict(human_orthologs, 'Gene stable ID', 'Mouse gene stable ID')
-
-        # using new ENSEMBL identifiers to map between old and new db
-        counter = -1
-        print('# motifs able to be mapped', len(motif_ids))
-
-        motif_hits = []
-        for m in motif_ids:
-            print(counter, 'next motif', m)
-            counter += 1
-            grp = DataFrameAnalyzer.read_tsv_gz(join(motifs_dir, m + ".tsv.gz"))
-            grp.columns = ['motif.id', 'ensembl'] + list(grp.columns[2:])
-            # put gene name into res column
-            from lib.SequenceMethods import SequenceMethods
-            tss = MyGeneAnalyzer.get_gene_tss('mouse', 2000)
-            tss = SequenceMethods.parse_range2coordinate(tss)
-            grp['gene.name'] = grp['ensembl'].map(DataFrameAnalyzer.get_dict(tss, 'range', 'SYMBOL'))
-            motif_hits.append(grp)
-        motif_hits = pd.concat(motif_hits)
-        return motif_hits
-
     @staticmethod
     def get_motif_enrichments_by_pairwise_grouping(genes_by_grouping, motif_hits, label=None, column_gene='ensembl',
                                                    stopat=None, key_c1=None):
@@ -69,7 +30,7 @@ class EnrichmentAnalyzer(object):
 
             c1, c2 = q
             if qi % 100 == 0:
-                print(qi, 'out of', len(queries))
+                print(qi, 'pairwise queries out of', len(queries))
 
             if c1 == c2:
                 t = [c1, c2, None, None, None, None, label, None, None, 1, 0.0, 1.0, 0, 1.0]
