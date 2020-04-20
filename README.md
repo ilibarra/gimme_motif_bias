@@ -12,7 +12,8 @@
 ----------------
 
 This Python workflow:
-1. Calculates motif biases (log2FC and Z-scores) between two cell types of interest, using top-N genes and TF motifs for TF-gene associations.
+1. Calculates motif biases (log2FC and Z-scores (up-coming)) between two cell types of interest, or a celltype versus a group of celltypes,
+using top-N genes and TF motifs for TF-gene associations.
 2. Summarizes values as a table, for downstream analyses
 
 
@@ -44,15 +45,19 @@ cd gimme_motif_bias
 
 ### Execution examples
 ```
-# 1 vs 1
 python gimme_motif_bias.py --listont # list all available ontologies and finish
 python gimme_motif_bias.py --listmotifs ASCL1 # list all motifs related to ASCL1
-python gimme_motif_bias.py -a "neuron" -b "hepatocyte" --motifid M08474_1.94d
+# 1 versus 1
+python gimme_motif_bias.py -a neuron -b hepatocyte --motifid M08474_1.94d 
+# force rewriting
+python gimme_motif_bias.py -a neuron -b hepatocyte --motifid M08474_1.94d --overwrite
+# 1 versus many
+python gimme_motif_bias.py -a neuron -b shortlist1 --motifid M08474_1.94d --overwrite
 ```
 
 ### Output
 - A TSV table with the respective effect sizes, p-values, in long format `see output/a_b_cell_type_motif.txt`
-- Excel table in similar format.
+- Excel table in similar format (if `--xlsx` is given).
 
 ### Running time
 - Around 1-2 minutes for one pair.

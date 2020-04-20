@@ -10,22 +10,38 @@ import utilities
 from utilities import *
 from itertools import product
 import numpy as np
+import pandas as pd
 
 # Main script function
 def calculate_motif_bias(a, b, motif_id, **kwargs):
 
     # save these genes in each tissue, assuming files do not exist
-    output_dir_genes = "input/genes_by_ont"
+    input_dir, output_dir = kwargs.get('indir'), kwargs.get('outdir')
+
+    ontdir = join(input_dir, "genes_by_ont")
     if kwargs.get('listont'):
         print('available cell types')
-        for f in listdir(output_dir_genes):
-            print(f.replace(".txt", ''))
+        for f in listdir(ontdir):
+            d = join(ontdir, f)
+            if isdir(d):
+                print('ontgroup:%s' % f)
+                for f2 in listdir(d):
+                    print("\t" + f2.replace(".txt", ''))
+            else:
+                print(f.replace(".txt", ''))
         return
     if kwargs.get('listmotifs') is not None:
         tfs = HumanTFs.get_tf_motifs_cisbp(datadir="input")
         print(tfs[tfs['HGNC symbol'].str.lower().str.contains(kwargs.get('listmotifs').lower())])
         return
 
+    is_group_a = isdir(join(ontdir, a))
+    is_group_b = isdir(join(ontdir, b))
+    names_a = {a} if not is_group_a else {f.replace(".txt", '') for f in listdir(join(ontdir, a))}
+    names_b = {b} if not is_group_b else {f.replace(".txt", '') for f in listdir(join(ontdir, b))}
+
+
+    print('Comparing %s vs %s' % (a, b))
     tm = TabulaMuris(method='FACS')
 
     plot = False
@@ -34,7 +50,6 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                                      inputdir='input')
     genes = set(zscores['gene.name'])
 
-    input_dir, output_dir = kwargs.get('indir'), kwargs.get('outdir')
 
     ens_by_gene_bkp = join(input_dir, "ensembl_by_symbol_tabula_muris.bkp")
     if not exists(ens_by_gene_bkp):
@@ -48,19 +63,15 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
 
     genes_by_ont = tm.get_genes_by_ont(N_GENES, add_external=True, n_cells_cutoff=10)
 
-    if not exists(output_dir_genes):
-        mkdir(output_dir_genes)
+    if not exists(ontdir):
+        mkdir(ontdir)
     for ont in genes_by_ont:
-        output_path = join(output_dir_genes, ont + ".txt")
+        output_path = join(ontdir, ont + ".txt")
         # print(exists(output_path), output_path)
         if not exists(output_path):
             DataFrameAnalyzer.write_list(genes_by_ont[ont], output_path)
 
     print('Comparing %s versus %s' % (a, b))
-
-    if not a in genes_by_ont or not b in genes_by_ont:
-        print('one cell type was not found (check format, quotes, etc.)')
-        assert a in genes_by_ont and b in genes_by_ont
 
     print('reading results motif hits')
 
@@ -122,7 +133,8 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         if not exists(output_dir_enrichments):
             makedirs(output_dir_enrichments)
 
-        pkl_path = join(output_dir_enrichments, motif_id + "_" + ensg_human + ".pkl")
+        pkl_path = join(output_dir_enrichments, motif_id + "%s_%s_%s" % (ensg_human, a, b) + ".pkl")
+        print(exists(pkl_path), pkl_path)
         if exists(pkl_path) and not kwargs.get('overwrite'):
             print('pkl path exists for engs_human', ensg_human, 'skip...')
             continue
@@ -168,12 +180,14 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             # sel_keys = {'Pancreas_leukocyte', 'Liver_hepatocyte', 'Brain_Non-Myeloid_neuron', 'Limb_Muscle_skeletal muscle satellite cell',
             #             'Heart_cardiac muscle cell'}
 
-            if not exists(output_path_motif_biases):
+            if not exists(output_path_motif_biases) or kwargs.get('overwrite'):
                 pairwise_combinations = [[c1, c2] for c1, c2 in product(sel_keys, repeat=2)]
                 # calculate enrichmments using a new method
                 print('calculating pair wise enrichments...')
                 try:
-                    enrichments = EnrichmentAnalyzer.get_motif_enrichments_by_pairwise_grouping({query: genes_by_ont[query] for query in [a, b]},
+                    sub_genes_ont = {query: genes_by_ont[query] for query in names_a.union(names_b) if query in genes_by_ont}
+                    print(len(sub_genes_ont), sub_genes_ont.keys())
+                    enrichments = EnrichmentAnalyzer.get_motif_enrichments_by_pairwise_grouping(sub_genes_ont,
                                                                                                 grp,
                                                                                                 label=motif_id,
                                                                                                 column_gene='gene.name')
@@ -293,6 +307,10 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             if not exists(pkl_path) or kwargs.get('overwrite'):
                 DataFrameAnalyzer.to_pickle([symbols, hm, enrichments], pkl_path)
                 DataFrameAnalyzer.to_tsv_gz(enrichments, pkl_path.replace(".pkl", '.tsv.gz'))
+                if kwargs.get('xlsx'):
+                    enrichments.to_excel(pkl_path.replace(".pkl", '.xlsx'))
+
+
 
 
 
@@ -301,16 +319,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--listont", action='store_true', help='List available ont and finish', default=False)
     parser.add_argument("--listmotifs", type=str, default=None, help='Get all motifs associated with TF and finish')
-    parser.add_argument("-a", type=str, default='hepatocyte', help='minimum primer length (def. 20)')
-    parser.add_argument("-b", type=str, default='neuron', help='minimum primer length (def. 24)')
+    parser.add_argument("-a", type=str, default='hepatocyte', help='Ontology label A')
+    parser.add_argument("-b", type=str, default='neuron', help='Ontology label B or group lable (e.g. shortlist1)')
     parser.add_argument("--ngenes", type=int, help='set number of topN genes for comparison', default=1000)
     parser.add_argument("--indir", type=str, default='input', help='input directory')
     parser.add_argument("--outdir", type=str, default='output', help='output directory')
     parser.add_argument("--overwrite", action='store_true', help='Force writing')
-    parser.add_argument("--motifid", type=str, default=None,
-                        help='motif.id')
+    parser.add_argument("--xlsx", action='store_true', help='Save additional copy as Excel')
+    parser.add_argument("--motifid", type=str, default=None, help='motif.id to be used (please run with listmotifs to see which ones are available)')
 
     opts = parser.parse_args()
 
     calculate_motif_bias(opts.a, opts.b, opts.motifid, indir=opts.indir, outdir=opts.outdir, listont=opts.listont,
-                         listmotifs=opts.listmotifs, ngenes=opts.ngenes, overwrite=opts.overwrite)
+                         listmotifs=opts.listmotifs, ngenes=opts.ngenes, overwrite=opts.overwrite, xlsx=opts.xlsx)
