@@ -23,15 +23,23 @@ This Python workflow:
 4. For each comparison, a log2FC is reported.
 
 ### Installation and running (typical time: less than 5 minutes)
+
+1. Clone repository.
 ```
 git clone gimme_motif_bias.git
 cd gimme_motif_bias
 ```
+2. Motif hits CIS-BP (mouse genome) (~1GB).
+    - download the following file and uncompress it in `input`
+[Motif hits mm10 (Dropbox)](https://www.dropbox.com/s/krqpe8lluw4otma/motif_hits_cisbp_build_1.94d_mm10.zip?dl=0)
 
 ### Environment requirements
 - `Python 3` https://www.python.org/
 - Data Science packages for Python: `pandas numpy`
 - `MyGene` (for ENSEMBL IDs conversion steps).
+    - [website](http://docs.mygene.info/projects/mygene-py/en/latest/)
+    - [Conda Installation](https://anaconda.org/bioconda/mygene)
+    - [Pip](https://pypi.org/project/mygene/)
 - `rypy` (optional) # it can be skipped by running with the flag '--skippadj'
 
 ### Execution examples
