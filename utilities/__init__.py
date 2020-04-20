@@ -8,4 +8,5 @@ from .EnrichmentAnalyzer import EnrichmentAnalyzer
 from .MyGeneAnalyzer import MyGeneAnalyzer
 from .func import *
 from .HumanTFs import HumanTFs
-from .GTEAnalyzer import GTEAnalyzer
+from .GTEXAnalyzer import GTEXAnalyzer
+from .RFacade import RFacade
