@@ -7,16 +7,17 @@ DESCRIPTION
 '''
 
 from .DataFrameAnalyzer import DataFrameAnalyzer
+from .path_functions import *
 
 class HumanTFs:
     @staticmethod
     def get_tf_names(**kwargs):
-        p = join(kwargs.get('datadir', '/g/scb2/zaugg/rio/EclipseProjects/zaugglab/moritz_collaboration/data'), 'DatabaseExtract_v_1.01.csv')
+        p = join(kwargs.get('datadir', 'input'), 'DatabaseExtract_v_1.01.csv')
         return DataFrameAnalyzer.read_tsv(p, sep=',')
 
     @staticmethod
     def get_tf_motifs_cisbp(**kwargs):
-        p = join(kwargs.get('datadir', '/g/scb2/zaugg/rio/EclipseProjects/zaugglab/moritz_collaboration/data'), 'Human_TF_MotifList_v_1.01.csv')
+        p = join(kwargs.get('datadir', 'input'), 'Human_TF_MotifList_v_1.01.csv')
         return DataFrameAnalyzer.read_tsv(p, sep=',')
 
     @staticmethod
@@ -52,8 +53,8 @@ class HumanTFs:
             ppm = DataFrameAnalyzer.read_tsv(model_path)
             ppm = ppm[ppm.columns[-4:]].transpose()
 
-        from lib.motif_plotter import ConsensusMotifPlotter
-        from lib.Motif.MotifAnalyzer import MotifAnalyzer
+        # from lib.motif_plotter import ConsensusMotifPlotter
+        # from lib.Motif.MotifAnalyzer import MotifAnalyzer
         motif_analyzer = MotifAnalyzer()
         if show_complementary:
             ppm = motif_analyzer.get_complementary_ppm(ppm)
