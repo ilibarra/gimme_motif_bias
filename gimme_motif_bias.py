@@ -101,7 +101,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     grp.columns = ['motif.id', 'ensembl'] + list(grp.columns[2:])
     # put gene name into res column
     from lib.SequenceMethods import SequenceMethods
-    tss = MyGeneAnalyzer.get_gene_tss('mouse', 2000, datadir="../../data")
+    tss = MyGeneAnalyzer.get_gene_tss('mouse', 2000, datadir=input_dir)
     tss = SequenceMethods.parse_range2coordinate(tss)
     grp['gene.name'] = grp['ensembl'].map(DataFrameAnalyzer.get_dict(tss, 'range', 'SYMBOL'))
 
