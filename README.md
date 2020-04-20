@@ -45,13 +45,9 @@ cd gimme_motif_bias
 ### Execution examples
 ```
 # 1 vs 1
-python gimme_motif_bias.py -a hepatocyte -b neuron --motifid # the motif ID is CIS-BP format
-python gimme_motif_bias.py -a hepatocyte -b neuron --tfname  # it uses all motifs from CIS-BP with this TF name
-# 1 vs many
-# LOAD TESTS
-# many versus many
-# 1 ve
-# FULL RUN
+python gimme_motif_bias.py --listont # list all available ontologies and finish
+python gimme_motif_bias.py --listmotifs ASCL1 # list all motifs related to ASCL1
+python gimme_motif_bias.py -a "neuron" -b "hepatocyte" --motifid M08474_1.94d
 ```
 
 ### Output
