@@ -7,6 +7,7 @@ Description:
 '''
 
 import mygene
+from .TerminalRepressors import TerminalRepressors
 mg = mygene.MyGeneInfo()
 
 class MyGeneAnalyzer:
@@ -34,7 +35,6 @@ class MyGeneAnalyzer:
 
     @staticmethod
     def get_gene_tss(species='hg19', extend=0, **kwargs):
-        from lib.TerminalRepressors import TerminalRepressors
         return TerminalRepressors.get_tss(species, extend, **kwargs)
 
     @staticmethod

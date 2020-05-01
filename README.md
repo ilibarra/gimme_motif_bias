@@ -45,6 +45,7 @@ cd gimme_motif_bias
 
 ### Execution examples
 ```
+python gimme_motif_bias.py --help # print help and exit
 python gimme_motif_bias.py --listont # list all available ontologies and finish
 python gimme_motif_bias.py --listmotifs ASCL1 # list all motifs related to ASCL1
 # 1 versus 1
@@ -56,8 +57,12 @@ python gimme_motif_bias.py -a neuron -b shortlist1 --motifid M08474_1.94d --over
 ```
 
 ### Output
-- A TSV table with the respective effect sizes, p-values, in long format `see output/a_b_cell_type_motif.txt`
+- A TSV table with the respective effect sizes, p-values, in long format `see output/motif_ensemblid.tsv.gz`
 - Excel table in similar format (if `--xlsx` is given).
+
+### Multiple runs
+- If running sequencially for several pairs, run with option `--overwrite` to update the current table
+- Values for repeated queries will unless cleaning the output directory. This is designed to save CPU time in the long run.
 
 ### Running time
 - Around 1-2 minutes for one pair.

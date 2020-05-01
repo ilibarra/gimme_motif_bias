@@ -1,22 +1,15 @@
-import rpy2
-import rpy2.robjects as robjects
-from rpy2.robjects import pandas2ri
-from rpy2.robjects.vectors import FloatVector, StrVector
-# r-libraries
-from rpy2.robjects.packages import importr
-
-pandas2ri.activate() # to convert pandas to R dataframe
+import numpy as np
 
 class RFacade:
     @staticmethod
-    def get_bh_pvalues(pvals):
-        """
-        Return a list with BH-corrected p-values
-        """
-
-        stats = importr('stats')
-        p_adjust = stats.p_adjust(FloatVector(pvals), method = 'BH')
-        return p_adjust
+    def get_bh_pvalues_python(p):
+        """Benjamini-Hochberg p-value correction for multiple hypothesis testing."""
+        p = np.asfarray(p)
+        by_descend = p.argsort()[::-1]
+        by_orig = by_descend.argsort()
+        steps = float(len(p)) / np.arange(len(p), 0, -1)
+        q = np.minimum(1, np.minimum.accumulate(steps * p[by_descend]))
+        return q[by_orig]
 
     @staticmethod
     def get_pval_asterisks(pvals, vert=False,
@@ -34,4 +27,6 @@ class RFacade:
                  (symbols[2] if pval < thresholds[2] else
                   symbols[3] if pval < thresholds[3] else ""))
                 for pval in pvals]
+
+
 

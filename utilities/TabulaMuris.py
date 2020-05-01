@@ -354,7 +354,7 @@ class TabulaMuris:
 
     def get_genes_by_ont(self, n_genes, n_cells_cutoff=100, field='gene.name', add_external=False):
         plot = False
-        print('loading zscores expression...')
+        # print('loading zscores expression...')
 
         zscores = self.get_zscores_by_gene(n_cells_cutoff=n_cells_cutoff, add_external=add_external)
 

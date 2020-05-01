@@ -15,9 +15,10 @@ import pandas as pd
 from numpy import median
 
 class EnrichmentAnalyzer(object):
+
     @staticmethod
     def get_motif_enrichments_by_pairwise_grouping(genes_by_grouping, motif_hits, label=None, column_gene='ensembl',
-                                                   stopat=None, key_c1=None):
+                                                   stopat=None, key_c1=None, query_keys=None):
         enrichments = []
 
         grouping_names = list(genes_by_grouping.keys())
@@ -27,10 +28,14 @@ class EnrichmentAnalyzer(object):
 
         motif_hits_by_ont = {ont: motif_hits[motif_hits[column_gene].isin(genes_by_grouping[ont])] for ont in grouping_names}
         for qi, q in enumerate(queries):
-
             c1, c2 = q
+
+            k = c1 + ":" + c2
+            if query_keys is not None and not k in query_keys:
+                continue
+
             if qi % 100 == 0:
-                print(qi, 'pairwise queries out of', len(queries))
+                print(qi, 'out of', len(queries))
 
             if c1 == c2:
                 t = [c1, c2, None, None, None, None, label, None, None, 1, 0.0, 1.0, 0, 1.0]

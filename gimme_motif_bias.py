@@ -132,11 +132,35 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         if not exists(output_dir_enrichments):
             makedirs(output_dir_enrichments)
 
-        pkl_path = join(output_dir_enrichments, motif_id + "%s_%s_%s" % (ensg_human, a, b) + ".pkl")
-        print(exists(pkl_path), pkl_path)
-        if exists(pkl_path) and not kwargs.get('overwrite'):
+        # pkl_path = join(output_dir_enrichments, motif_id + "%s_%s_%s" % (ensg_human, a, b) + ".pkl")
+        pkl_path = join(output_dir_enrichments, motif_id + "_%s" % ensg_human + ".pkl")
+
+        # This section generates Mememto for old files already generated, to avoid re-calculating
+        _, _, old_enrichments = None, None, None
+        queries = None
+        if exists(pkl_path):
             print('pkl path exists for engs_human', ensg_human, 'skip...')
-            continue
+
+            print('To overwrite an update pair please run with option and query the new cases (overwrite)...')
+            if not kwargs.get('overwrite', False):
+                return
+
+            _, _, old_enrichments = DataFrameAnalyzer.read_pickle(pkl_path, encoding="latin1")
+            print('old enrichments shape', old_enrichments.shape[0])
+            ready_pairs = {a + ":" + b for a, b in zip(old_enrichments['a'], old_enrichments['b'])}
+            # if all defined cell types are already provided, then finish
+            queries = {c1 + ":" + c2 for c1, c2 in product(list(names_a.union(names_b)), repeat=2)}
+
+            # print(queries)
+            queries -= ready_pairs
+
+            # print(ready_pairs)
+            # print(queries)
+            print('# of queries: %i' % len(queries))
+            if len(queries) == 0:
+                print('nothing to do here... Done. Continue with next motif...')
+                continue
+
         output_dir_mm10 = join("%s" % output_dir,
                                "enrichment_n_depletion_clustermaps_expr_atlas_CISBP_build_1.94d_mm10")
         output_dir_mm10_motif_biases = join("%s" % output_dir,
@@ -165,13 +189,13 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         print(ensembl_gtex)
 
         for zscores, label in zip([zscores], ['tabula-muris']):
-            print('next check:', label)
+            # print('next check:', label)
             if not 'Mouse gene stable ID' in zscores:
                 zscores['Mouse gene stable ID'] = [engmus_by_enghuman[idx]
                                                    if idx in engmus_by_enghuman else None
                                                    for idx in zscores.index]
             mouse_ensg_set = set(zscores['Mouse gene stable ID'])
-            print(output_path)
+            # print(output_path)
             # print jobid, counter, m, ensembl_by_model[m]
 
             # print genes_df.keys()
@@ -185,9 +209,9 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                 print('calculating pair wise enrichments...')
                 try:
                     sub_genes_ont = {query: genes_by_ont[query] for query in names_a.union(names_b) if query in genes_by_ont}
-                    print(len(sub_genes_ont), sub_genes_ont.keys())
+                    # print(len(sub_genes_ont), sub_genes_ont.keys())
                     enrichments = EnrichmentAnalyzer.get_motif_enrichments_by_pairwise_grouping(sub_genes_ont,
-                                                                                                grp,
+                                                                                                grp, query_keys=queries,
                                                                                                 label=motif_id,
                                                                                                 column_gene='gene.name')
                     enrichments['odds.ratio'] = np.where(enrichments['a'] == enrichments['b'], 1.0,
@@ -196,9 +220,15 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                                                      enrichments['log2FC'])
                     # print list(genes_df.keys())
                     # print enrichments
-                    print('enrichments calculated...')
+                    # print('enrichments calculated...')
                     if 'ensembl' in enrichments:
                         del enrichments['ensembl']
+
+                    if old_enrichments is not None:
+                        enrichments = pd.concat([old_enrichments, enrichments]).reset_index(drop=True)
+                        enrichments['main.k'] = enrichments['a'] + ":" + enrichments['b']
+                        enrichments = enrichments.drop_duplicates('main.k').reset_index(drop=True)
+                        del enrichments['main.k']
 
                     DataFrameAnalyzer.to_tsv_gz(enrichments, output_path_motif_biases)
                 except Exception:
@@ -213,12 +243,12 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             reject = False
 
             ensg_human = ensg_human.replace(".", '')
-            print(ensg_human)
+            # print(ensg_human)
             ensg_mouse = engmus_by_enghuman[ensg_human] if ensg_human in engmus_by_enghuman else None
 
             # print ensg_mouse
 
-            print('label', ensembl_gtex)
+            # print('label', ensembl_gtex)
             if label == 'tabula-muris':
                 columns = []  # ['Brain_Non-Myeloid_neuron', 'Pancreas_endothelial cell']
                 cell_types = []  # ['Brain', 'Pancreas']
@@ -227,14 +257,14 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
             n_mouse = zscores[zscores['ensembl'] == ensg_mouse].shape[0]
             n_human = zscores[zscores['ensembl'] == ensg_human].shape[0]
 
-            print('# mouse', n_mouse)
-            print('# human', n_human)
+            # print('# mouse', n_mouse)
+            # print('# human', n_human)
             # if label == 'GTEx' and n_mouse == 0 or label == 'Expression Atlas' and n_human == 0:
             #     reject = True
             # if reject:
             #     break
 
-            print('label', label)
+            # print('label', label)
             finish = False
 
             for ri, r in zscores[zscores['ensembl'] == ensg_mouse].iterrows():
@@ -250,7 +280,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
                     # print zscore_by_tissue
                     # if reject: # ensg was not found in requested table: skip
                     # continue
-            enrichments['p.adj'] = RFacade.get_bh_pvalues(enrichments['p.val'])
+            enrichments['p.adj'] = RFacade.get_bh_pvalues_python(enrichments['p.val'])
 
             # print zscore_by_tissue
             enrichments['z.score.expr'] = [zscore_by_tissue[k] if k in zscore_by_tissue else np.nan
@@ -301,7 +331,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
 
             # we save a heatmap with the obtained values and pvalues
             # print symbols
-            print(hm.shape)
+            # print(hm.shape)
 
             if not exists(pkl_path) or kwargs.get('overwrite'):
                 DataFrameAnalyzer.to_pickle([symbols, hm, enrichments], pkl_path)
@@ -314,6 +344,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
 
 
 if __name__ == '__main__':
+    import sys
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--listont", action='store_true', help='List available ont and finish', default=False)
@@ -328,6 +359,10 @@ if __name__ == '__main__':
     parser.add_argument("--motifid", type=str, default=None, help='motif.id to be used (please run with listmotifs to see which ones are available)')
 
     opts = parser.parse_args()
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
     calculate_motif_bias(opts.a, opts.b, opts.motifid, indir=opts.indir, outdir=opts.outdir, listont=opts.listont,
                          listmotifs=opts.listmotifs, ngenes=opts.ngenes, overwrite=opts.overwrite, xlsx=opts.xlsx)
