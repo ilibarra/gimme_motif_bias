@@ -39,13 +39,13 @@ source activate gmb
 [Motif hits mm10 (Dropbox)](https://www.dropbox.com/s/krqpe8lluw4otma/motif_hits_cisbp_build_1.94d_mm10.zip?dl=0)
 
 ### Dependencies (they must be installed before running).
+(If creating an envinroment with requirements.txt, then already good to go).
 - `Python 3` https://www.python.org/
 - Data Science packages for Python: `pandas numpy`
 - `MyGene` (for ENSEMBL IDs conversion steps).
     - [website](http://docs.mygene.info/projects/mygene-py/en/latest/)
     - [Conda Installation](https://anaconda.org/bioconda/mygene)
     - [Pip](https://pypi.org/project/mygene/)
-- `rpy2` (optional) # to calculate adjusted P values.
 
 ### Execution examples
 ```
