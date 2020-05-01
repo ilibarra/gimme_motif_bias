@@ -29,6 +29,10 @@ using top-N genes and TF motifs for TF-gene associations.
 ```
 git clone gimme_motif_bias.git
 cd gimme_motif_bias
+
+#### Create an enviroment suitable to run this (gmb can be replaced by any name you want).
+conda create --name gmb --file requirements.txt
+source activate gmb
 ```
 2. Motif hits CIS-BP (mouse genome) (~1GB).
     - download the following file and uncompress it in `input`
