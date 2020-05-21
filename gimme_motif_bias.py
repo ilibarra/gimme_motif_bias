@@ -111,7 +111,7 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
 
     grp.columns = ['motif.id', 'ensembl'] + list(grp.columns[2:])
     # put gene name into res column
-    tss = MyGeneAnalyzer.get_gene_tss('mouse', 2000, datadir=input_dir)
+    tss = MyGeneAnalyzer.get_gene_tss('mouse', kwargs.get('tssdistance', 2000), datadir=input_dir)
     tss = SequenceMethods.parse_range2coordinate(tss)
     grp['gene.name'] = grp['ensembl'].map(DataFrameAnalyzer.get_dict(tss, 'range', 'SYMBOL'))
 
@@ -356,6 +356,7 @@ if __name__ == '__main__':
     parser.add_argument("--outdir", type=str, default='output', help='output directory')
     parser.add_argument("--overwrite", action='store_true', help='Force writing')
     parser.add_argument("--xlsx", action='store_true', help='Save additional copy as Excel')
+    parser.add_argument('--tssdistance', default=2000, type=int, help='extension of TSS regions (default = 2000)')
     parser.add_argument("--motifid", type=str, default=None, help='motif.id to be used (please run with listmotifs to see which ones are available)')
 
     opts = parser.parse_args()
