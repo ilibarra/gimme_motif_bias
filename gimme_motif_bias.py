@@ -40,7 +40,6 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     names_a = {a} if not is_group_a else {f.replace(".txt", '') for f in listdir(join(ontdir, a))}
     names_b = {b} if not is_group_b else {f.replace(".txt", '') for f in listdir(join(ontdir, b))}
 
-
     print('Comparing %s vs %s' % (a, b))
     tm = TabulaMuris(method='FACS')
 
@@ -62,6 +61,13 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
     N_GENES = kwargs.get('ngenes')
 
     genes_by_ont = tm.get_genes_by_ont(N_GENES, add_external=True, n_cells_cutoff=10)
+
+    # remove weird characters
+    ont_keys = genes_by_ont.keys()
+    for ont in ont_keys:
+        if "_h5" in ont or '.h5' in ont:
+            genes_by_ont[ont.replace(".h5", '').replace("_h5", '')] = genes_by_ont[ont]
+            del genes_by_ont[ont]
 
     if not exists(ontdir):
         mkdir(ontdir)

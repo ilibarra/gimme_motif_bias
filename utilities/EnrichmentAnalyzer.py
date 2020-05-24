@@ -25,9 +25,13 @@ class EnrichmentAnalyzer(object):
         # print genes_df.keys()
         queries = [[c1, c2] for c1, c2 in product(grouping_names, repeat=2)]
         print('# queries', len(queries))
+        print('calculating enrichment log2FC ...')
 
         motif_hits_by_ont = {ont: motif_hits[motif_hits[column_gene].isin(genes_by_grouping[ont])] for ont in grouping_names}
-        for qi, q in enumerate(queries):
+
+        hits_by_gene_by_c = {}
+
+        for qi, q in enumerate(queries): # [:2000]):
             c1, c2 = q
 
             k = c1 + ":" + c2
@@ -44,7 +48,6 @@ class EnrichmentAnalyzer(object):
             if key_c1 is not None and not key_c1 in c1:
                 continue
 
-
             genes2 = set(genes_by_grouping[c2])
             genes1 = set(genes_by_grouping[c1])  # - genes2
 
@@ -57,25 +60,45 @@ class EnrichmentAnalyzer(object):
             # check in mouse and human genes, respectively
             # sel1 = motif_hits[motif_hits['ensembl'].isin(genes1_mus)]
             # if sel1.shape[0] == 0:
-            sel1 = motif_hits_by_ont[c1]
 
             # sel2 = motif_hits[motif_hits['ensembl'].isin(genes2_mus)]
             # if sel2.shape[0] == 0:
-            sel2 = motif_hits_by_ont[c2]
+
+            hits1_by_gene = None
+            if not c1 in hits_by_gene_by_c:
+                sel1 = motif_hits_by_ont[c1]
+                hits1_by_gene = dict(sel1[column_gene].value_counts())
+                for gene_id in genes1:
+                    if not gene_id in hits1_by_gene:
+                        hits1_by_gene[gene_id] = 0
+                hits_by_gene_by_c[c1] = hits1_by_gene
+            else:
+                hits1_by_gene = hits_by_gene_by_c[c1]
+
+            hits2_by_gene = None
+            if not c2 in hits_by_gene_by_c:
+                sel2 = motif_hits_by_ont[c2]
+                hits2_by_gene = dict(sel2[column_gene].value_counts())
+                for gene_id in genes2:
+                    if not gene_id in hits2_by_gene:
+                        hits2_by_gene[gene_id] = 0
+                hits_by_gene_by_c[c2] = hits1_by_gene
+            else:
+                hits2_by_gene = hits_by_gene_by_c[c2]
 
             # print c1, len(genes1), sel1.shape[0], c2, len(genes2), sel2.shape[0]
-            hits1_by_gene = {}
-            for ensg_id, grp2 in sel1.groupby(column_gene):
-                hits1_by_gene[ensg_id] = grp2.shape[0]
-            for gene_id in genes1:
-                if not gene_id in hits1_by_gene:
-                    hits1_by_gene[gene_id] = 0
-            hits2_by_gene = {}
-            for ensg_id, grp2 in sel2.groupby(column_gene):
-                hits2_by_gene[ensg_id] = grp2.shape[0]
-            for gene_id in genes1:
-                if not gene_id in hits2_by_gene:
-                    hits2_by_gene[gene_id] = 0
+            # hits1_by_gene = {}
+            # for ensg_id, grp2 in sel1.groupby(column_gene):
+            #     hits1_by_gene[ensg_id] = grp2.shape[0]
+            # for gene_id in genes1:
+            #     if not gene_id in hits1_by_gene:
+            #         hits1_by_gene[gene_id] = 0
+            # hits2_by_gene = {}
+            # for ensg_id, grp2 in sel2.groupby(column_gene):
+            #     hits2_by_gene[ensg_id] = grp2.shape[0]
+            # for gene_id in genes2:
+            #     if not gene_id in hits2_by_gene:
+            #         hits2_by_gene[gene_id] = 0
 
             t_stat, pval_ttest = ttest_ind(list(hits1_by_gene.values()),
                                            list(hits2_by_gene.values()))
