@@ -36,7 +36,7 @@ source activate gmb
 ```
 2. Motif hits CIS-BP (mouse genome) (~1GB).
     - download the following file and uncompress it in `input`
-[Motif hits mm10 (Dropbox)](https://www.dropbox.com/s/krqpe8lluw4otma/motif_hits_cisbp_build_1.94d_mm10.zip?dl=0)
+[Motif hits mm10 (Dropbox)](https://www.dropbox.com/s/u9ruy4mbt8wc2pk/motif_hits_cisbp_build_1.94d_mm10.zip?dl=0)
 
 ### Dependencies (they must be installed before running).
 (If creating an envinroment with requirements.txt, then already good to go).
