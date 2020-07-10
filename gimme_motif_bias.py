@@ -32,7 +32,10 @@ def calculate_motif_bias(a, b, motif_id, **kwargs):
         return
     if kwargs.get('listmotifs') is not None:
         tfs = HumanTFs.get_tf_motifs_cisbp(datadir="input")
-        print(tfs[tfs['HGNC symbol'].str.lower().str.contains(kwargs.get('listmotifs').lower())])
+        sel = tfs[tfs['HGNC symbol'].str.lower().str.contains(kwargs.get('listmotifs').lower())]
+        print(sel)
+        for cisbpid in sel['CIS-BP ID']:
+            print(cisbpid)
         return
 
     is_group_a = isdir(join(ontdir, a))
